@@ -750,6 +750,9 @@ stages:
             displayName: run playwright tests
             workingDirectory: src/ContosoTraders.Ui.Website
             timeoutInMinutes: 20
+            env:
+              PLAYWRIGHT_SERVICE_ACCESS_TOKEN: $(PLAYWRIGHT_SERVICE_ACCESS_TOKEN)
+              PLAYWRIGHT_SERVICE_URL: $(PLAYWRIGHT_SERVICE_URL)
           - task: PublishTestResults@2
             displayName: publish test results
             condition: succeededOrFailed()
