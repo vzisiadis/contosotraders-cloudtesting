@@ -746,7 +746,7 @@ stages:
             workingDirectory: src/ContosoTraders.Ui.Website
           - script: |
               echo "##vso[task.setvariable variable=CI;]1"
-              npx playwright test -c playwright.service.config.ts --workers=20
+              set CI=true && npx playwright test -c playwright.service.config.ts --workers=20
             displayName: run playwright tests 
             workingDirectory: src/ContosoTraders.Ui.Website
             timeoutInMinutes: 20

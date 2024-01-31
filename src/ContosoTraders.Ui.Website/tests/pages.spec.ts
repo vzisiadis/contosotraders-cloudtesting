@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Header', () => {
-  test.skip('should be able to search by text', async ({ page }) => {
+  test('should be able to search by text', async ({ page }) => {
     await page.getByPlaceholder('Search by product name or search by image').fill('laptops');
     await page.getByPlaceholder('Search by product name or search by image').press('Enter');
     await expect(page).toHaveURL('/suggested-products-list');
@@ -61,7 +61,7 @@ test.describe('Carousel', () => {
   })
 });
 
-test.describe.skip('CarouselVRT', () => {  
+test.describe('CarouselVRT', () => {  
   test('verify carousel is pixel perfect - slide 1', async ({ page }) => {
     await expect(page.getByTestId('carousel')).toHaveScreenshot();
   })
