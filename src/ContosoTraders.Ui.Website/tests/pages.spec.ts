@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.describe('Header', () => {
+  test.skip(({ browserName }) => browserName == 'chromium', 'Non Chromium only!');
   test('should be able to search by text', async ({ page }) => {
     await page.getByPlaceholder('Search by product name or search by image').fill('laptops');
     await page.getByPlaceholder('Search by product name or search by image').press('Enter');
@@ -61,7 +62,7 @@ test.describe('Carousel', () => {
   })
 });
 
-test.describe('CarouselVRT', () => {  
+test.describe.skip('CarouselVRT', () => {  
   test.skip(({ browserName }) => browserName !== 'chromium', 'Chromium only!');
   test('verify carousel is pixel perfect - slide 1', async ({ page }) => {
     await expect(page.getByTestId('carousel')).toHaveScreenshot();

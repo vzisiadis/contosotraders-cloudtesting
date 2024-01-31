@@ -613,8 +613,8 @@ stages:
                 ]
 
       - job: load_tests_carts_internal_api
-        condition: eq(variables['DEPLOYPRIVATEENDPOINTS'], 'true')
         dependsOn: [provision, playwright_tests_ui]
+        condition: eq(variables['DEPLOYPRIVATEENDPOINTS'], 'true')
         steps:
           - task: AzureCLI@1
             displayName: get carts api endpoint (internal)
