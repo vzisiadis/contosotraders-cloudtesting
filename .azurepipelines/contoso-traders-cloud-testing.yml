@@ -556,162 +556,162 @@ stages:
               scriptLocation: inlineScript
               inlineScript: echo UI CDN endpoint accessible at https://$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name uiCdnEndpoint --query value -o tsv)
 
-      # - job: load_tests_with_chaos_products_api
-      #   dependsOn: [provision, playwright_tests_ui]
-      #   variables:
-      #     productsApiEndpoint: $[ dependencies.provision.outputs['getProductsApiEndpoint.productsApiEndpoint'] ]
-      #   steps:
-      #     - task: AzureCLI@1
-      #       displayName: get chaos experiment resource id
-      #       name: getChaosAksExperimentResourceId
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         scriptLocation: inlineScript
-      #         inlineScript: echo "##vso[task.setvariable variable=chaosAksExperimentResourceId;isOutput=true]$(az resource show --resource-group $(RESOURCE_GROUP_NAME)$(SUFFIX) --namespace Microsoft.Chaos --resource-type Experiments --name $(CHAOS_AKS_EXPERIMENT_NAME)$(SUFFIX) --query "id" -o tsv)"
-      #     - task: AzureCLI@1
-      #       displayName: start chaos experiment (pod failure)
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         scriptLocation: inlineScript
-      #         inlineScript: az rest --method post --uri https://management.azure.com$(getChaosAksExperimentResourceId.chaosAksExperimentResourceId)/start?api-version=2021-09-15-preview
-      #     - bash: sleep 30s
-      #       displayName: sleep for 30 seconds
-      #     - task: AzureLoadTest@1
-      #       displayName: load test (products API)
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         # Path of the YAML file. Should be fully qualified path or relative to the default working directory
-      #         loadtestConfigFile: ./loadtests/contoso-traders-products.yaml
-      #         resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
-      #         loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
-      #         env: |
-      #           [
-      #             {
-      #               "name": "domain",
-      #               "value": "$(productsApiEndpoint)"
-      #             },
-      #             {
-      #               "name": "protocol",
-      #               "value": "https"
-      #             },
-      #             {
-      #               "name": "path",
-      #               "value": "v1/Products/1"
-      #             },
-      #             {
-      #               "name": "threads_per_engine",
-      #               "value": "5"
-      #             },
-      #             {
-      #               "name": "ramp_up_time",
-      #               "value": "0"
-      #             },
-      #             {
-      #               "name": "duration_in_sec",
-      #               "value": "120"
-      #             }
-      #           ]
+      - job: load_tests_with_chaos_products_api
+        dependsOn: [provision, playwright_tests_ui]
+        variables:
+          productsApiEndpoint: $[ dependencies.provision.outputs['getProductsApiEndpoint.productsApiEndpoint'] ]
+        steps:
+          - task: AzureCLI@1
+            displayName: get chaos experiment resource id
+            name: getChaosAksExperimentResourceId
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              scriptLocation: inlineScript
+              inlineScript: echo "##vso[task.setvariable variable=chaosAksExperimentResourceId;isOutput=true]$(az resource show --resource-group $(RESOURCE_GROUP_NAME)$(SUFFIX) --namespace Microsoft.Chaos --resource-type Experiments --name $(CHAOS_AKS_EXPERIMENT_NAME)$(SUFFIX) --query "id" -o tsv)"
+          - task: AzureCLI@1
+            displayName: start chaos experiment (pod failure)
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              scriptLocation: inlineScript
+              inlineScript: az rest --method post --uri https://management.azure.com$(getChaosAksExperimentResourceId.chaosAksExperimentResourceId)/start?api-version=2021-09-15-preview
+          - bash: sleep 30s
+            displayName: sleep for 30 seconds
+          - task: AzureLoadTest@1
+            displayName: load test (products API)
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              # Path of the YAML file. Should be fully qualified path or relative to the default working directory
+              loadtestConfigFile: ./loadtests/contoso-traders-products.yaml
+              resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
+              loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
+              env: |
+                [
+                  {
+                    "name": "domain",
+                    "value": "$(productsApiEndpoint)"
+                  },
+                  {
+                    "name": "protocol",
+                    "value": "https"
+                  },
+                  {
+                    "name": "path",
+                    "value": "v1/Products/1"
+                  },
+                  {
+                    "name": "threads_per_engine",
+                    "value": "5"
+                  },
+                  {
+                    "name": "ramp_up_time",
+                    "value": "0"
+                  },
+                  {
+                    "name": "duration_in_sec",
+                    "value": "120"
+                  }
+                ]
 
-      # - job: load_tests_carts_internal_api
-      #   dependsOn: [provision, playwright_tests_ui]
-      #   condition: eq(variables['DEPLOYPRIVATEENDPOINTS'], 'true')
-      #   steps:
-      #     - task: AzureCLI@1
-      #       displayName: get carts api endpoint (internal)
-      #       name: getCartsInternalApiEndpoint
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         scriptLocation: inlineScript
-      #         inlineScript: echo "##vso[task.setvariable variable=cartsInternalApiEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name cartsInternalApiEndpoint --query value -o tsv)"
-      #     - task: AzureCLI@1
-      #       displayName: get vnetAcaSubnetId
-      #       name: getVnetAcaSubnetId
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         scriptLocation: inlineScript
-      #         inlineScript: echo "##vso[task.setvariable variable=vnetAcaSubnetId;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) -n vnetAcaSubnetId --query "value" -o tsv)"
-      #     - task: replacetokens@5
-      #       displayName: substitute tokens in load test config file
-      #       inputs:
-      #         targetFiles: ./loadtests/contoso-traders-carts-internal.yaml
-      #         tokenPattern: doublebraces
-      #         inlineVariables: "LOAD_TEST_SUBNET_ID: $(getVnetAcaSubnetId.vnetAcaSubnetId)"
-      #     - task: AzureLoadTest@1
-      #       displayName: load test (carts API)
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         # Path of the YAML file. Should be fully qualified path or relative to the default working directory
-      #         loadtestConfigFile: ./loadtests/contoso-traders-carts-internal.yaml
-      #         resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
-      #         loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
-      #         env: |
-      #           [
-      #             {
-      #               "name": "domain",
-      #               "value": "$(getCartsInternalApiEndpoint.cartsInternalApiEndpoint)"
-      #             },
-      #             {
-      #               "name": "protocol",
-      #               "value": "https"
-      #             },
-      #             {
-      #               "name": "path",
-      #               "value": "v1/ShoppingCart/loadtest"
-      #             },
-      #             {
-      #               "name": "threads_per_engine",
-      #               "value": "5"
-      #             },
-      #             {
-      #               "name": "ramp_up_time",
-      #               "value": "0"
-      #             },
-      #             {
-      #               "name": "duration_in_sec",
-      #               "value": "120"
-      #             }
-      #           ]
+      - job: load_tests_carts_internal_api
+        dependsOn: [provision, playwright_tests_ui]
+        condition: eq(variables['DEPLOYPRIVATEENDPOINTS'], 'true')
+        steps:
+          - task: AzureCLI@1
+            displayName: get carts api endpoint (internal)
+            name: getCartsInternalApiEndpoint
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              scriptLocation: inlineScript
+              inlineScript: echo "##vso[task.setvariable variable=cartsInternalApiEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name cartsInternalApiEndpoint --query value -o tsv)"
+          - task: AzureCLI@1
+            displayName: get vnetAcaSubnetId
+            name: getVnetAcaSubnetId
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              scriptLocation: inlineScript
+              inlineScript: echo "##vso[task.setvariable variable=vnetAcaSubnetId;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) -n vnetAcaSubnetId --query "value" -o tsv)"
+          - task: replacetokens@5
+            displayName: substitute tokens in load test config file
+            inputs:
+              targetFiles: ./loadtests/contoso-traders-carts-internal.yaml
+              tokenPattern: doublebraces
+              inlineVariables: "LOAD_TEST_SUBNET_ID: $(getVnetAcaSubnetId.vnetAcaSubnetId)"
+          - task: AzureLoadTest@1
+            displayName: load test (carts API)
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              # Path of the YAML file. Should be fully qualified path or relative to the default working directory
+              loadtestConfigFile: ./loadtests/contoso-traders-carts-internal.yaml
+              resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
+              loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
+              env: |
+                [
+                  {
+                    "name": "domain",
+                    "value": "$(getCartsInternalApiEndpoint.cartsInternalApiEndpoint)"
+                  },
+                  {
+                    "name": "protocol",
+                    "value": "https"
+                  },
+                  {
+                    "name": "path",
+                    "value": "v1/ShoppingCart/loadtest"
+                  },
+                  {
+                    "name": "threads_per_engine",
+                    "value": "5"
+                  },
+                  {
+                    "name": "ramp_up_time",
+                    "value": "0"
+                  },
+                  {
+                    "name": "duration_in_sec",
+                    "value": "120"
+                  }
+                ]
 
-      # - job: load_tests_carts_api
-      #   dependsOn: [provision, playwright_tests_ui]
-      #   variables:
-      #     cartsApiEndpoint: $[ dependencies.provision.outputs['getCartsApiEndpoint.cartsApiEndpoint'] ]
-      #   steps:
-      #     - task: AzureLoadTest@1
-      #       displayName: load test (carts API)
-      #       inputs:
-      #         azureSubscription: niantoni-mcaps-tenant-sub
-      #         # Path of the YAML file. Should be fully qualified path or relative to the default working directory
-      #         loadtestConfigFile: ./loadtests/contoso-traders-carts.yaml
-      #         resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
-      #         loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
-      #         env: |
-      #           [
-      #             {
-      #               "name": "domain",
-      #               "value": "$(cartsApiEndpoint)"
-      #             },
-      #             {
-      #               "name": "protocol",
-      #               "value": "https"
-      #             },
-      #             {
-      #               "name": "path",
-      #               "value": "v1/ShoppingCart/loadtest"
-      #             },
-      #             {
-      #               "name": "threads_per_engine",
-      #               "value": "5"
-      #             },
-      #             {
-      #               "name": "ramp_up_time",
-      #               "value": "0"
-      #             },
-      #             {
-      #               "name": "duration_in_sec",
-      #               "value": "120"
-      #             }
-      #           ]
+      - job: load_tests_carts_api
+        dependsOn: [provision, playwright_tests_ui]
+        variables:
+          cartsApiEndpoint: $[ dependencies.provision.outputs['getCartsApiEndpoint.cartsApiEndpoint'] ]
+        steps:
+          - task: AzureLoadTest@1
+            displayName: load test (carts API)
+            inputs:
+              azureSubscription: niantoni-mcaps-tenant-sub
+              # Path of the YAML file. Should be fully qualified path or relative to the default working directory
+              loadtestConfigFile: ./loadtests/contoso-traders-carts.yaml
+              resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
+              loadtestResource: $(LOAD_TEST_SERVICE_NAME)$(SUFFIX)
+              env: |
+                [
+                  {
+                    "name": "domain",
+                    "value": "$(cartsApiEndpoint)"
+                  },
+                  {
+                    "name": "protocol",
+                    "value": "https"
+                  },
+                  {
+                    "name": "path",
+                    "value": "v1/ShoppingCart/loadtest"
+                  },
+                  {
+                    "name": "threads_per_engine",
+                    "value": "5"
+                  },
+                  {
+                    "name": "ramp_up_time",
+                    "value": "0"
+                  },
+                  {
+                    "name": "duration_in_sec",
+                    "value": "120"
+                  }
+                ]
 
       - job: playwright_tests_ui
         dependsOn: [provision]
