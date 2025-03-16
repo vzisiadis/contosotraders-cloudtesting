@@ -98,7 +98,7 @@ stages:
             displayName: create/update azure active directory app
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az ad app create --display-name $(AZURE_AD_APP_NAME)$(SUFFIX) --sign-in-audience AzureADandPersonalMicrosoftAccount
           - task: AzureCLI@1
@@ -106,7 +106,7 @@ stages:
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             name: getAzureAdAppObjId
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=azureAdAppObjId;isOutput=true]$(az ad app list --display-name $(AZURE_AD_APP_NAME)$(SUFFIX) --query [].id -o tsv)"
           - task: AzureCLI@1
@@ -114,7 +114,7 @@ stages:
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             name: getAzureAdAppClientId
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=azureAdAppClientId;isOutput=true]$(az ad app list --display-name $(AZURE_AD_APP_NAME)$(SUFFIX) --query [].appId -o tsv)"
           - task: AzureCLI@1
@@ -133,14 +133,14 @@ stages:
             displayName: enable issuance of id, access tokens
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az ad app update --id $(getAzureAdAppObjId.azureAdAppObjId) --enable-access-token-issuance true --enable-id-token-issuance true
           - task: AzureCLI@1
             displayName: enable email claim in access token
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az ad app update --id $(getAzureAdAppObjId.azureAdAppObjId) --optional-claims "{\"accessToken\":[{\"name\":\"email\",\"essential\":false}]}"
           # note: requesting MS Graph permissions in Azure AD app unfortunately isn't idempotent.
@@ -150,7 +150,7 @@ stages:
             displayName: delete any requested Microsoft Graph permissions
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az ad app permission delete \
@@ -160,7 +160,7 @@ stages:
             displayName: request Microsoft Graph permissions
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az ad app permission add \
@@ -180,7 +180,7 @@ stages:
             displayName: create resource group
             inputs:
               deploymentScope: Subscription
-              azureResourceManagerConnection: niantoni-mcaps-tenant-sub
+              azureResourceManagerConnection: vzisiadis-msnonprod
               location: $(DEPLOYMENTREGION)
               csmFile: ./iac/createResourceGroup.bicep
               overrideParameters: -rgName $(RESOURCE_GROUP_NAME) -suffix $(SUFFIX) -rgLocation $(DEPLOYMENTREGION)
@@ -196,7 +196,7 @@ stages:
             displayName: create resources
             inputs:
               deploymentScope: Resource Group
-              azureResourceManagerConnection: niantoni-mcaps-tenant-sub
+              azureResourceManagerConnection: vzisiadis-msnonprod
               location: $(DEPLOYMENTREGION)
               resourceGroupName: "$(RESOURCE_GROUP_NAME)$(SUFFIX)"
               csmFile: ./iac/createResources.bicep
@@ -207,14 +207,14 @@ stages:
           - task: AzureCLI@1
             displayName: add service principal to kv access policy
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az keyvault set-policy -n $(KV_NAME)$(SUFFIX) -g $(RESOURCE_GROUP_NAME)$(SUFFIX) --secret-permissions get list set --object-id $(az ad sp show --id $(az account show --query "user.name" -o tsv) --query "id" -o tsv)
           # The AKS agent pool needs to be assigned the user-assigned managed identity created (which has kv access)
           - task: AzureCLI@1
             displayName: assign user-assigned managed-identity to aks agentpool
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az vmss identity assign \
@@ -226,26 +226,26 @@ stages:
           - task: AzureCLI@1
             displayName: seed product image (product details)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az storage blob sync --account-name '$(PRODUCT_IMAGES_STORAGE_ACCOUNT_NAME)$(SUFFIX)' -c '$(PRODUCT_DETAILS_CONTAINER_NAME)' -s 'src/ContosoTraders.Api.Images/product-details'
           - task: AzureCLI@1
             displayName: seed product image (product list)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az storage blob sync --account-name '$(PRODUCT_IMAGES_STORAGE_ACCOUNT_NAME)$(SUFFIX)' -c '$(PRODUCT_LIST_CONTAINER_NAME)' -s 'src/ContosoTraders.Api.Images/product-list'
           - task: AzureCLI@1
             displayName: purge product images cdn endpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az cdn endpoint purge --no-wait --content-paths '/*' -n '$(PRODUCTS_CDN_ENDPOINT_NAME)$(SUFFIX)' -g '$(RESOURCE_GROUP_NAME)$(SUFFIX)' --profile-name '$(CDN_PROFILE_NAME)$(SUFFIX)'
           - task: AzureCLI@1
             displayName: extract acr password
             name: extractAcrPassword
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=acrPassword;isOutput=true;issecret=true]$(az acr credential show -n $(ACR_NAME)$(SUFFIX) -g $(RESOURCE_GROUP_NAME)$(SUFFIX) --query "passwords[0].value" --output tsv)"
           - script: docker login $(ACR_NAME)$(SUFFIX).azurecr.io --username $(ACR_NAME)$(SUFFIX) --password $(extractAcrPassword.acrPassword)
@@ -253,7 +253,7 @@ stages:
           - task: AzureCLI@1
             displayName: set aks context
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az aks get-credentials --resource-group $(RESOURCE_GROUP_NAME)$(SUFFIX) --name $(AKS_CLUSTER_NAME)$(SUFFIX)
 
@@ -267,7 +267,7 @@ stages:
           - task: AzureCLI@1
             displayName: deploy to aca
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
@@ -276,7 +276,7 @@ stages:
             displayName: deploy to aca (internal)
             condition: eq(variables['DEPLOYPRIVATEENDPOINTS'], 'true')
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az config set extension.use_dynamic_install=yes_without_prompt
@@ -285,7 +285,7 @@ stages:
             displayName: get carts api endpoint
             name: getCartsApiEndpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=cartsApiEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name cartsApiEndpoint --query value -o tsv)"
 
@@ -316,14 +316,14 @@ stages:
             displayName: get managedIdentityClientId
             name: getManagedIdentityClientId
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=managedIdentityClientId;isOutput=true]$(az identity show -g $(RESOURCE_GROUP_NAME)$(SUFFIX) --name $(USER_ASSIGNED_MANAGED_IDENTITY_NAME)$(SUFFIX) --query "clientId" -o tsv)"
           - task: KubernetesManifest@1
             displayName: create kubernetes secret (kv endpoint)
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: createSecret
@@ -334,7 +334,7 @@ stages:
             displayName: create kubernetes secret (managed identity client id)
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: createSecret
@@ -357,7 +357,7 @@ stages:
             displayName: apply deployment manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -368,7 +368,7 @@ stages:
             displayName: apply service manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -378,7 +378,7 @@ stages:
             displayName: apply namespace manifest (chaos-testing)
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -404,7 +404,7 @@ stages:
           - task: AzureCLI@1
             displayName: set dns label on public ip
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az network public-ip update --dns-name $(AKS_DNS_LABEL)$(SUFFIX) -g $(AKS_NODES_RESOURCE_GROUP_NAME)$(SUFFIX) -n $(az network public-ip list --query "[?starts_with(name,'kubernetes-') ].name" -o tsv -g $(AKS_NODES_RESOURCE_GROUP_NAME)$(SUFFIX))
           # hack: extract the full fqdn / dns label of the aks app's public IP address
@@ -412,7 +412,7 @@ stages:
             displayName: get aks-fqdn
             name: getAksFqdn
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               # note: There should be a whitespace between ')' and ']'. More details: https://stackoverflow.com/a/59154958
               inlineScript: echo "##vso[task.setvariable variable=aksFqdn;isOutput=true]$(az network public-ip list --query "[?starts_with(name,'kubernetes-') ].dnsSettings.fqdn" -o tsv -g $(AKS_NODES_RESOURCE_GROUP_NAME)$(SUFFIX))"
@@ -436,7 +436,7 @@ stages:
             displayName: apply clusterIssuer manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -453,7 +453,7 @@ stages:
             displayName: apply certificate manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -470,7 +470,7 @@ stages:
             displayName: apply ingress manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -479,7 +479,7 @@ stages:
             displayName: apply clusterRole manifest
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
@@ -487,14 +487,14 @@ stages:
           - task: AzureCLI@1
             displayName: set productsApiEndpoint in kv
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az keyvault secret set --vault-name $(KV_NAME)$(SUFFIX) --name productsApiEndpoint --value $(getAksFqdn.aksFqdn) --description "endpoint url (fqdn) of the products api"
           - task: AzureCLI@1
             displayName: get products api endpoint
             name: getProductsApiEndpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=productsApiEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name productsApiEndpoint --query value -o tsv)"
 
@@ -521,27 +521,27 @@ stages:
           - task: AzureCLI@1
             displayName: deploy ui to storage
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az storage blob sync --account-name '$(UI_STORAGE_ACCOUNT_NAME)$(SUFFIX)' -c '$web' -s 'src/ContosoTraders.Ui.Website/build'
           - task: AzureCLI@1
             displayName: purge ui cdn endpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az cdn endpoint purge --no-wait --content-paths '/*' -n '$(UI_CDN_ENDPOINT_NAME)$(SUFFIX)' -g '$(RESOURCE_GROUP_NAME)$(SUFFIX)' --profile-name '$(CDN_PROFILE_NAME)$(SUFFIX)'
           - task: AzureCLI@1
             displayName: get ui cdn endpoint
             name: getUiCdnEndpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=uiCdnEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name uiCdnEndpoint --query value -o tsv)"
           - task: AzureCLI@1
             displayName: register auth callback (UI CDN)
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az rest \
@@ -552,7 +552,7 @@ stages:
           - task: AzureCLI@1
             displayName: display ui cdn endpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo UI CDN endpoint accessible at https://$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name uiCdnEndpoint --query value -o tsv)
 
@@ -565,13 +565,13 @@ stages:
             displayName: get chaos experiment resource id
             name: getChaosAksExperimentResourceId
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=chaosAksExperimentResourceId;isOutput=true]$(az resource show --resource-group $(RESOURCE_GROUP_NAME)$(SUFFIX) --namespace Microsoft.Chaos --resource-type Experiments --name $(CHAOS_AKS_EXPERIMENT_NAME)$(SUFFIX) --query "id" -o tsv)"
           - task: AzureCLI@1
             displayName: start chaos experiment (pod failure)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: az rest --method post --uri https://management.azure.com$(getChaosAksExperimentResourceId.chaosAksExperimentResourceId)/start?api-version=2021-09-15-preview
           - bash: sleep 30s
@@ -579,7 +579,7 @@ stages:
           - task: AzureLoadTest@1
             displayName: load test (products API)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               # Path of the YAML file. Should be fully qualified path or relative to the default working directory
               loadtestConfigFile: ./loadtests/contoso-traders-products.yaml
               resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
@@ -620,14 +620,14 @@ stages:
             displayName: get carts api endpoint (internal)
             name: getCartsInternalApiEndpoint
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=cartsInternalApiEndpoint;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) --name cartsInternalApiEndpoint --query value -o tsv)"
           - task: AzureCLI@1
             displayName: get vnetAcaSubnetId
             name: getVnetAcaSubnetId
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: echo "##vso[task.setvariable variable=vnetAcaSubnetId;isOutput=true]$(az keyvault secret show --vault-name $(KV_NAME)$(SUFFIX) -n vnetAcaSubnetId --query "value" -o tsv)"
           - task: replacetokens@5
@@ -639,7 +639,7 @@ stages:
           - task: AzureLoadTest@1
             displayName: load test (carts API)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               # Path of the YAML file. Should be fully qualified path or relative to the default working directory
               loadtestConfigFile: ./loadtests/contoso-traders-carts-internal.yaml
               resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
@@ -680,7 +680,7 @@ stages:
           - task: AzureLoadTest@1
             displayName: load test (carts API)
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               # Path of the YAML file. Should be fully qualified path or relative to the default working directory
               loadtestConfigFile: ./loadtests/contoso-traders-carts.yaml
               resourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
