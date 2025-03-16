@@ -121,7 +121,7 @@ stages:
             displayName: register app as a spa
             condition: and(ne(variables['AADUSERNAME'], ''), ne(variables['AADPASSWORD'], ''))
             inputs:
-              azureSubscription: niantoni-mcaps-tenant-sub
+              azureSubscription: vzisiadis-msnonprod
               scriptLocation: inlineScript
               inlineScript: |
                 az rest \
@@ -421,7 +421,7 @@ stages:
             displayName: apply namespace manifest (cert-manager)
             inputs:
               connectionType: azureResourceManager
-              azureSubscriptionConnection: niantoni-mcaps-tenant-sub
+              azureSubscriptionConnection: vzisiadis-msnonprod
               azureResourceGroup: $(RESOURCE_GROUP_NAME)$(SUFFIX)
               kubernetesCluster: $(AKS_CLUSTER_NAME)$(SUFFIX)
               action: deploy
